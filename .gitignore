@@ -1,2 +1,4 @@
 .idea/
-main.py
+__pycache__/
+config.py
+
