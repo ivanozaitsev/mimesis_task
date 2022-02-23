@@ -49,3 +49,5 @@ users_big_salary.to_csv('users_big_salary.csv', sep='|', index=False, header=Fal
 
 users_apache_lic = df_users_devs[df_users_devs['software_license'].str.contains('Apache', na=False)]
 users_apache_lic.to_csv('users_apache_lic.csv', sep='|', index=False, header=False)
+print('Files users_haskell.parquet, users_devs.csv, users_companies.csv,'
+      '\n users_big_salary.csv, users_apache_lic.csv were created')
