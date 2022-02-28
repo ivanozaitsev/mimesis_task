@@ -20,16 +20,15 @@ class DataGenerator:
      Method insertion moves data from dataframes to tables inside MySQL DB.
      Method drop_tables drops created tables from MySQL DB.
     """
+
     def __init__(self):
         self.users = pd.DataFrame()
         self.companies = pd.DataFrame()
         self.devs = pd.DataFrame()
 
-    def new_users(self, n):
-        if n < 1:
-            raise ValueError('n must be positive number')
+    def __new_users(self, n):
+        assert n > 0, 'n must be a positive number'
         user = Person()
-        ids = list(range(0, ))
         schema = Schema(schema=lambda: {
             'id': str(uuid4().int)[:7],
             'name': user.first_name(),
@@ -42,29 +41,28 @@ class DataGenerator:
             'occupation': user.occupation(),
             'phone': user.telephone(),
             'username': user.username(),
-            'added_at': datetime.now(),
+            'added_at': datetime.utcnow(),
             'added_by': 'mimesis.Person'
         })
         schema = schema.create(iterations=n)
         return pd.DataFrame(schema)
 
-    def new_companies(self):
+    def __new_companies(self):
         user = Person()
         hard = Hardware()
         schema = Schema(schema=lambda: {
             'company': hard.manufacturer(),
             'ceo': user.full_name(),
             'country': user.nationality(),
-            'added_at': datetime.now(),
+            'added_at': datetime.utcnow(),
             'added_by': 'mimesis.Person & mimesis.Hardware'
         })
         schema = schema.create(iterations=4)
         df = pd.DataFrame(schema)
         return df
 
-    def new_devs(self, n):
-        if n < 1:
-            raise ValueError('n must be positive number')
+    def __new_devs(self, n):
+        assert n > 0, 'n must be a positive number'
         dev = Development()
         schema = Schema(schema=lambda: {
             'language': dev.programming_language(),
@@ -72,13 +70,14 @@ class DataGenerator:
             'software_license': dev.software_license(),
             'os': dev.os(),
             'experience': random.randint(1, 30),
-            'added_at': datetime.now(),
+            'added_at': datetime.utcnow(),
             'added_by': 'mimesis.Development',
             'income_usd': random.randint(2, 50) * 100
         })
         schema = schema.create(iterations=n)
         df = pd.DataFrame(schema)
         df = df.loc[df['language_2'] != df['language']]
+        df['user_id'] = self.users['id']
         return df
 
     def create_tables(self):
@@ -132,10 +131,12 @@ class DataGenerator:
             print('Tables users, development, companies were created. Connection is closed')
 
     def df_creation(self, n):
-        self.users = self.new_users(n)
-        self.devs = self.new_devs(n)
-        self.companies = self.new_companies()
-        self.devs['user_id'] = self.users['id']
+        self.users = self.users.append(self.__new_users(n))
+        self.devs = self.devs.append(self.__new_devs(n))
+        self.companies = self.companies.append(self.__new_companies())
+        while self.devs.shape[0] != n:
+            dif = n - self.devs.shape[0]
+            self.devs = self.devs.append(self.__new_devs(dif))
         print('Datasets new_users, new_devs, new_companies were created')
 
     def insertion(self):
@@ -151,15 +152,21 @@ class DataGenerator:
             conn.close()
             print('Data was inserted into MySQL DB. Connection is closed')
 
-    def drop_tables(self):
-        try:
-            engine = create_engine(
-                path.format(username, password, hostname, dbname),
-                echo=True)
-            conn = engine.connect()
-            conn.execute("DROP TABLE development")
-            conn.execute("DROP TABLE companies")
-            conn.execute("DROP TABLE users")
-        finally:
-            conn.close()
-            print('Tables were removed. Connection is closed')
+    def flush(self):
+        self.users = self.users[0:0]
+        self.devs = self.devs[0:0]
+        self.companies = self.companies[0:0]
+        print('Dataframes were cleaned')
+
+
+dg = DataGenerator()
+dg.create_tables()
+dg.df_creation(1000)
+dg.insertion()
+
+"""
+ In case you will need to flush the generated records from the DataGenerator:
+"""
+"""
+dg.flush()
+"""

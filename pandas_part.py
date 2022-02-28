@@ -1,18 +1,20 @@
+from datetime import datetime
+import random
+
 from sqlalchemy import create_engine
 import pandas as pd
-import numpy as np
 import pyarrow as pa
 import pyarrow.parquet as pq
 
-from config import username, password, hostname, dbname, cols, path
+from config import username, password, hostname, dbname, cols, path, users_stm, companies_stm, devs_stm
 
 try:
     engine = create_engine(path.format(username, password, hostname, dbname),
                            echo=True)
     conn = engine.connect()
-    df_users = pd.read_sql("select * from {}.users".format(dbname), conn)
-    df_companies = pd.read_sql("select * from {}.companies".format(dbname), conn)
-    df_development = pd.read_sql("select * from {}.development".format(dbname), conn)
+    df_users = pd.read_sql(users_stm.format(dbname), conn)
+    df_companies = pd.read_sql(companies_stm.format(dbname), conn)
+    df_development = pd.read_sql(devs_stm.format(dbname), conn)
 finally:
     conn.close()
     print('Table has been read. Connection is close')
@@ -20,14 +22,13 @@ finally:
 df_users['name'] = df_users[['name', 'surname']].agg(' '.join, axis=1)
 df_users = df_users.drop('surname', axis=1).rename(columns={'name': 'full_name'})
 pd.set_option('display.max_columns', None)
-df_users['birth_year'] = pd.to_datetime('1991-01-01 00:00:01')
-df_users['company_id'] = np.random.randint(1, 5, size=len(df_users))
+df_users['birth_year'] = datetime.utcnow().year - df_users['age']
+df_users['company_id'] = [random.choice(df_companies['company_id']) for i in df_users.index]
 df_users_companies = df_users.join(df_companies.set_index('company_id'), on='company_id', how='left',
                                    lsuffix='_user', rsuffix='_company')
 df_users = df_users.rename(columns={'language': 'native_language'})
 df_users_devs = df_users.join(df_development.set_index('user_id'), on='id', how='left',
                               rsuffix='_development')
-
 
 for col in cols:
     df_users_devs[col] = df_users_devs[col].astype('Int32')
