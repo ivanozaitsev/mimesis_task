@@ -78,6 +78,9 @@ class DataGenerator:
         df = pd.DataFrame(schema)
         df = df.loc[df['language_2'] != df['language']]
         df['user_id'] = self.users['id']
+        while df.shape[0] != n:
+            dif = n - df.shape[0]
+            df = df.append(self.__new_devs(dif))
         return df
 
     def create_tables(self):
@@ -134,9 +137,7 @@ class DataGenerator:
         self.users = self.users.append(self.__new_users(n))
         self.devs = self.devs.append(self.__new_devs(n))
         self.companies = self.companies.append(self.__new_companies())
-        while self.devs.shape[0] != n:
-            dif = n - self.devs.shape[0]
-            self.devs = self.devs.append(self.__new_devs(dif))
+
         print('Datasets new_users, new_devs, new_companies were created')
 
     def insertion(self):
@@ -165,8 +166,8 @@ dg.df_creation(1000)
 dg.insertion()
 
 """
+ 
  In case you will need to flush the generated records from the DataGenerator:
-"""
-"""
+
 dg.flush()
 """
