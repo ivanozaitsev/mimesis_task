@@ -1,2 +1,5 @@
 .idea/
-main.py
+__pycache__/
+config.py
+csv_creation.sql
+sql_exec.py
